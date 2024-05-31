@@ -1,4 +1,4 @@
-from utils import *
+from .utils import *
 
 def random_search(time_data, status_data,population_size=100):
   num_patients = len(time_data)
