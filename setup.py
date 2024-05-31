@@ -9,15 +9,10 @@ setup(
         'pandas',
         'scikit-learn',
         'matplotlib',
-        'multiprocessing',
         'snfpy',
         'scikit-survival',
         'lifelines',
-        'random',
-        'scipy',
-        'time',
-        'contextlib',
-        'io'
+        'scipy'
     ],
     author='Anjana BHAT',
     author_email='bhatanjana.ab@gmail.com',  
