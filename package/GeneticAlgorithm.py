@@ -3,7 +3,7 @@ import random
 import multiprocessing
 from multiprocessing import Pool
 import time
-from utils import *
+from .utils import *
 
 # Function to perform selection based on fitness scores
 def selection(population, fitness_scores, num_selected):
