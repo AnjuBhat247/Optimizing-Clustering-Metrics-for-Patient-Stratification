@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='Clustering Algorithms',  
+    name='ClusteringAlgorithms',  
     version='0.1.0',  # Initial version number
     packages=find_packages(),
     install_requires=[
