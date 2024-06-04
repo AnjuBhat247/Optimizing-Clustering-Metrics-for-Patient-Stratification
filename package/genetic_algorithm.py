@@ -26,18 +26,18 @@ class GeneticAlgorithm:
         crossover_type : type of crossover, possible values : one-point, two-point, uniform ; default one-point
         mutation_type : type of mutation, possible values : flip-bit, swap ; default flip-bit
         """
-        self.time_data = time_data
-        self.status_data = status_data
-        self.num_clusters = num_clusters
-        self.population_size = population_size
-        self.num_generations = num_generations
-        self.mutation_rate = mutation_rate
-        self.eps = eps
-        self.max_consecutive_generations = max_consecutive_generations
-        self.selection_percentage = selection_percentage
-        self.min_cluster_size = min_cluster_size
-        self.crossover_type = crossover_type
-        self.mutation_type = mutation_type
+    self.time_data = time_data
+    self.status_data = status_data
+    self.num_clusters = num_clusters
+    self.population_size = population_size
+    self.num_generations = num_generations
+    self.mutation_rate = mutation_rate
+    self.eps = eps
+    self.max_consecutive_generations = max_consecutive_generations
+    self.selection_percentage = selection_percentage
+    self.min_cluster_size = min_cluster_size
+    self.crossover_type = crossover_type
+    self.mutation_type = mutation_type
 
     def selection(self, population, fitness_scores, num_selected):
         population_sel = [population[i] for i in np.argsort(fitness_scores)[:num_selected]]
