@@ -6,9 +6,26 @@ import time
 from .utils import logrank_fitness, initialize_population
 
 class GeneticAlgorithm:
-    def __init__(self, time_data, status_data,num_clusters=2, population_size=100, num_generations=500, mutation_rate=0.01,
+    def __init__(self, time_data, status_data,num_clusters=2,res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
                  eps=1e-4, max_consecutive_generations=5, selection_percentage=0.25,
                  min_cluster_size=0.1, crossover_type='one-point', mutation_type='flip-bit'):
+
+         """
+        time_data : number of days/months until the specified event i.e., death
+        status_data : Binary Censoring status
+        num_clusters : number of clusters
+        res = required result ; 'best' returns only single best solution, 'best_dist' returns number of best solutions mentioned in nres
+        nres = number of best scores needed if res = 'best_distr'
+        population_size : number of candidate solutions to be generated, default 100
+        num_generations : number of iterations, default 500
+        mutation_rate : used to decide if the value in candidate solution needs to be flipped or not while mutation process, default 0.01
+        eps : epsilon, a small threshold value, indicating that the algorithm terminates if changes are less than this value, default 1e-4
+        max_consecutive_generations : the maximum number of consecutive iterations during which the changes must be smaller than epsilon for the algorithm to terminate, default 5
+        selection_percentage : indicates the percentage of top candidate solutions to be selected to create new population, default 0.25 (25% of total population)
+        min_cluster_size : minimum cluster size, default 0.1 (10% of number of patients)
+        crossover_type : type of crossover, possible values : one-point, two-point, uniform ; default one-point
+        mutation_type : type of mutation, possible values : flip-bit, swap ; default flip-bit
+        """
         self.time_data = time_data
         self.status_data = status_data
         self.num_clusters = num_clusters
@@ -76,6 +93,10 @@ class GeneticAlgorithm:
         consecutive_generations_without_improvement = 0
         pool = multiprocessing.Pool()
 
+        if nres!=None and nres >population_size :
+            print("nres should be less than or equal to population_size")
+            break
+
         for generation in range(self.num_generations):
             print(generation)
             fitness_scores = [logrank_fitness(cluster_indices, self.time_data, self.status_data) for cluster_indices in population]
@@ -104,7 +125,11 @@ class GeneticAlgorithm:
             else:
                 population = offspring_population
 
-        best_solution = population[fitness_scores.index(current_best_fitness)]
         end_time = time.time()
         print('Total time taken : ', end_time - start_time, ' seconds')
-        return best_solution, current_best_fitness
+        if res == 'best':
+            best_solution = population[fitness_scores.index(current_best_fitness)]
+            return best_solution, current_best_fitness
+        elif res == 'best_dist':
+            population_sel, scores_sel = [population[i] for i in np.argsort(fitness_scores)[:nres]], [fitness_scores[i] for i in np.argsort(fitness_scores)[:num_selected]]
+            return population_sel, scores_sel
