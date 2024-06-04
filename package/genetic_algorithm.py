@@ -104,7 +104,7 @@ class GeneticAlgorithm:
             selected_population = self.selection(population, fitness_scores, int(self.population_size * self.selection_percentage))
 
             with Pool() as pool:
-                args = [(selected_population, self.mutation_rate, self.crossover_type, self.mutation_type) for _ in range(int(self.population_size // 2))]
+                args = [(selected_population) for _ in range(int(self.population_size // 2))]
                 results = pool.starmap(self.new_population, args)
                 offspring_population = [child for pair in results for child in pair if np.all(np.bincount(child)[1:] >= min_size)]
 
