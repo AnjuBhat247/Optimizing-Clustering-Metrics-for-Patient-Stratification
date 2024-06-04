@@ -6,11 +6,12 @@ import time
 from .utils import logrank_fitness, initialize_population
 
 class GeneticAlgorithm:
-    def __init__(self, time_data, status_data, population_size=100, num_generations=500, mutation_rate=0.01,
+    def __init__(self, time_data, status_data,num_clusters=2, population_size=100, num_generations=500, mutation_rate=0.01,
                  eps=1e-4, max_consecutive_generations=5, selection_percentage=0.25,
                  min_cluster_size=0.1, crossover_type='one-point', mutation_type='flip-bit'):
         self.time_data = time_data
         self.status_data = status_data
+        self.num_clusters = num_clusters
         self.population_size = population_size
         self.num_generations = num_generations
         self.mutation_rate = mutation_rate
@@ -35,8 +36,8 @@ class GeneticAlgorithm:
             child1 = np.concatenate((parent1[:point1], parent2[point1:point2], parent1[point2:]))
             child2 = np.concatenate((parent2[:point1], parent1[point1:point2], parent2[point2:]))
         elif self.crossover_type == 'uniform':
-            mask1 = np.random.randint(0, len(np.unique(parent1)), size=len(parent1))
-            mask2 = np.random.randint(0, len(np.unique(parent1)), size=len(parent2))
+            mask1 = np.random.randint(1, self.num_clusters+1, size=len(parent1))
+            mask2 = np.random.randint(1, self.num_clusters+1, size=len(parent2))
             child1 = np.where(mask1 == mask2, parent1, parent2)
             child2 = np.where(mask1 == mask2, parent2, parent1)
         else:
@@ -44,13 +45,12 @@ class GeneticAlgorithm:
         return child1, child2
 
     def mutation(self, individual):
-        num_clusters = len(np.unique(individual))
         if self.mutation_type == 'flip-bit':
             for i in range(len(individual)):
                 if random.random() < self.mutation_rate:
-                    new_cluster = random.randint(1, num_clusters)  # Assuming clusters are labeled 1 to num_clusters
+                    new_cluster = random.randint(1, self.num_clusters+1)  # Assuming clusters are labeled 1 to num_clusters
                     while new_cluster == individual[i]:
-                        new_cluster = random.randint(1, num_clusters)
+                        new_cluster = random.randint(1, self.num_clusters+1)
                     individual[i] = new_cluster
         elif self.mutation_type == 'swap':
             for i in range(len(individual)):
@@ -72,7 +72,7 @@ class GeneticAlgorithm:
         start_time = time.time()
         num_patients = len(self.time_data)
         min_size = int(num_patients * self.min_cluster_size)
-        population = initialize_population(self.population_size, num_patients)
+        population = initialize_population(self.population_size, num_patients,self.num_clusters)
         consecutive_generations_without_improvement = 0
         pool = multiprocessing.Pool()
 
