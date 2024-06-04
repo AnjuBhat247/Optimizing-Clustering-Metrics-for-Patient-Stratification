@@ -10,7 +10,7 @@ class GeneticAlgorithm:
                  eps=1e-4, max_consecutive_generations=5, selection_percentage=0.25,
                  min_cluster_size=0.1, crossover_type='one-point', mutation_type='flip-bit'):
 
-         """
+        """
         time_data : number of days/months until the specified event i.e., death
         status_data : Binary Censoring status
         num_clusters : number of clusters
