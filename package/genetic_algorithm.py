@@ -29,6 +29,8 @@ class GeneticAlgorithm:
         self.time_data = time_data
         self.status_data = status_data
         self.num_clusters = num_clusters
+        self.res = res
+        self.nres = nres
         self.population_size = population_size
         self.num_generations = num_generations
         self.mutation_rate = mutation_rate
@@ -93,7 +95,7 @@ class GeneticAlgorithm:
         consecutive_generations_without_improvement = 0
         pool = multiprocessing.Pool()
 
-        if nres!=None and nres >population_size :
+        if self.nres!=None and self.nres >self.population_size :
             raise ValueError("nres should be less than or equal to population_size")
 
         for generation in range(self.num_generations):
@@ -126,9 +128,9 @@ class GeneticAlgorithm:
 
         end_time = time.time()
         print('Total time taken : ', end_time - start_time, ' seconds')
-        if res == 'best':
+        if self.res == 'best':
             best_solution = population[fitness_scores.index(current_best_fitness)]
             return best_solution, current_best_fitness
-        elif res == 'best_dist':
-            population_sel, scores_sel = [population[i] for i in np.argsort(fitness_scores)[:nres]], [fitness_scores[i] for i in np.argsort(fitness_scores)[:num_selected]]
+        elif self.res == 'best_dist':
+            population_sel, scores_sel = [population[i] for i in np.argsort(fitness_scores)[:self.nres]], [fitness_scores[i] for i in np.argsort(fitness_scores)[:self.nres]]
             return population_sel, scores_sel
