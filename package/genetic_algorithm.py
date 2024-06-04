@@ -94,8 +94,7 @@ class GeneticAlgorithm:
         pool = multiprocessing.Pool()
 
         if nres!=None and nres >population_size :
-            print("nres should be less than or equal to population_size")
-            break
+            raise ValueError("nres should be less than or equal to population_size")
 
         for generation in range(self.num_generations):
             print(generation)
