@@ -12,7 +12,8 @@ setup(
         'snfpy',
         'scikit-survival',
         'lifelines',
-        'scipy'
+        'scipy',
+        'pygad'
     ],
     author='Anjana BHAT',
     author_email='bhatanjana.ab@gmail.com',  
