@@ -140,9 +140,10 @@ class pygad_ga:
 
     ga_instance = pygad.GA(**self.ga_args)
     ga_instance.run()
+    print(f"Terminating at Generation: {ga_instance.generations_completed}")
     if self.res=="best_dist":
-      final_population = ga_instance.population
-      return final_population
+      final_population, fitness_scores = ga_instance.population,ga_instance.last_generation_fitness
+      return final_population, fitness_scores
     elif self.res=="best":
       best_solution, best_solution_fitness, best_solution_idx = ga_instance.best_solution()
       if self.optimize=="p_val":
