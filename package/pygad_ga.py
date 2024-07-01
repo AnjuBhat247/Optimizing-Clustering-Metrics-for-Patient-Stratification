@@ -149,5 +149,4 @@ class pygad_ga:
       if self.optimize=="p_val":
         return best_solution, -(best_solution_fitness)
       else:
-        print(f"Terminating at Generation: {ga_instance.generations_completed}")
         return best_solution,best_solution_fitness
