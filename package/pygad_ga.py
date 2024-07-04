@@ -9,7 +9,7 @@ class pygad_ga:
     res : type of result required -> best_dist returns final population, best returns only best solution
     optimize : optimizes given metric -> if given p_val - algorithm optimizes p_values, if given log_p - algorithm optimizes -log10(p),
                 if given statistic - algorithm optimizes test statistic
-    data : patient data that must have columns Time and Status to calculate various metrics
+    data : patient data that must have columns OS_days and OS to calculate various metrics
     objective : 'single' objective uses only logrank metrics, 'multiple' objective uses all three metrics
     """
     global data, obj,min_size, previous_best_fitness, no_change_count, eps, no_significant_change_generations
@@ -32,9 +32,9 @@ class pygad_ga:
       if obj == 'multiple':
         return [np.inf] * 3
       return np.inf
-    fitness1 = -(multivariate_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status']).p_value)
-    fitness2 = -(pairwise_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status'],weightings="wilcoxon").p_value[0])
-    fitness3 = -(pairwise_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status'],weightings="tarone-ware").p_value[0])
+    fitness1 = -(multivariate_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS']).p_value)
+    fitness2 = -(pairwise_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS'],weightings="wilcoxon").p_value[0])
+    fitness3 = -(pairwise_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS'],weightings="tarone-ware").p_value[0])
     if obj == 'multiple':
       return [fitness1,fitness2,fitness3]
     return fitness1
@@ -46,9 +46,9 @@ class pygad_ga:
       if obj == 'multiple':
         return [np.inf] * 3
       return np.inf
-    fitness1 = -np.log10(multivariate_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status']).p_value)
-    fitness2 = -np.log10(pairwise_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status'],weightings="wilcoxon").p_value[0])
-    fitness3 = -np.log10(pairwise_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status'],weightings="tarone-ware").p_value[0])
+    fitness1 = -np.log10(multivariate_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS']).p_value)
+    fitness2 = -np.log10(pairwise_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS'],weightings="wilcoxon").p_value[0])
+    fitness3 = -np.log10(pairwise_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS'],weightings="tarone-ware").p_value[0])
     if obj == 'multiple':
       return [fitness1,fitness2,fitness3]
     return fitness1
@@ -59,9 +59,9 @@ class pygad_ga:
       if obj == 'multiple':
         return [np.inf] * 3  # Return large values or NaNs for multi-objective case to avoid selection
       return np.inf
-    fitness1 = multivariate_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status']).test_statistic
-    fitness2 = pairwise_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status'],weightings="wilcoxon").test_statistic[0]
-    fitness3 = pairwise_logrank_test(event_durations=data['Time'], groups=solution, event_observed=data['status'],weightings="tarone-ware").test_statistic[0]
+    fitness1 = multivariate_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS']).test_statistic
+    fitness2 = pairwise_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS'],weightings="wilcoxon").test_statistic[0]
+    fitness3 = pairwise_logrank_test(event_durations=data['OS_days'], groups=solution, event_observed=data['OS'],weightings="tarone-ware").test_statistic[0]
     if obj == 'multiple':
       return [fitness1,fitness2,fitness3]
     return fitness1
