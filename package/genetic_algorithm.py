@@ -67,17 +67,22 @@ class GeneticAlgorithm:
         if self.mutation_type == 'flip-bit':
             for i in range(len(individual)):
                 if random.random() < self.mutation_rate:
-                    new_cluster = random.randint(1, self.num_clusters+1)  # Assuming clusters are labeled 1 to num_clusters
-                    while new_cluster == individual[i]:
-                        new_cluster = random.randint(1, self.num_clusters+1)
-                    individual[i] = new_cluster
+                    alternatives = set(range(1, self.num_clusters+1))
+                    alternatives.discard(individual[i])
+                    individual[i] = random.choice(list(alternatives))
         elif self.mutation_type == 'swap':
             for i in range(len(individual)):
                 if random.random() < self.mutation_rate:
                     swap_idx = random.randint(0, len(individual) - 1)
                     individual[i], individual[swap_idx] = individual[swap_idx], individual[i]
+        elif self.mutation_type == 're-prob':  #repeated probabilistic mutation
+            while random.random() < self.mutation_rate:
+                i = random.randint(0, len(individual) - 1)
+                alternatives = set(range(1, self.num_clusters+1))
+                alternatives.discard(individual[i])
+                individual[i] = random.choice(list(alternatives))
         else:
-            raise ValueError("Invalid mutation type. Choose from 'flip-bit' or 'swap'.")
+            raise ValueError("Invalid mutation type. Choose from 'flip-bit', 'swap' or 're-prob'.")
         return individual
 
     def new_population(self, selected_population):
