@@ -47,6 +47,10 @@ class GeneticAlgorithm:
         self.objective = objective
         self.optimize = optimize
 
+        global previous_best_fitness, no_change_count
+        previous_best_fitness = None
+        no_change_count = 0
+
     def selection(self, population, fitness_scores, num_selected):
         population_sel = [population[i] for i in np.argsort(fitness_scores)[-num_selected:][::-1]]
         return population_sel
@@ -155,6 +159,42 @@ class GeneticAlgorithm:
         population_sel = [population[i] for i in selected_indices]
         return population_sel
 
+    def callback_generation(self,fitness_scores,generation):
+        current_best_fitness = max(fitness_scores)
+    
+        if previous_best_fitness is not None:
+            if self.optimize=='p_val':
+                fitness_change = abs(-np.log10(-previous_best_fitness) + np.log10(-current_best_fitness))
+            else :
+                fitness_change = abs(previous_best_fitness - current_best_fitness)
+            if fitness_change < self.eps:
+                no_change_count += 1
+            else:
+                no_change_count = 0
+        else:
+            no_change_count = 0
+    
+        previous_best_fitness = current_best_fitness
+        if self.optimize=='p_val':
+            print(f"Generation: {generation}, Best Fitness: {-current_best_fitness}")
+        else:
+            print(f"Generation: {generation}, Best Fitness: {current_best_fitness}")
+
+    def callback_generation_multi(self,fitness_scores,generation):
+        current_best_fitness = max(fitness_scores)
+    
+        if previous_best_fitness is not None:
+          fitness_change = abs(previous_best_fitness - current_best_fitness)
+          if fitness_change < self.eps:
+            no_change_count += 1
+          else:
+            no_change_count = 0
+        else:
+          no_change_count = 0
+    
+        previous_best_fitness = current_best_fitness
+        print(f"Generation: {generation}, Best Fitness: {current_best_fitness}")
+
     def run(self):
         start_time = time.time()
         num_patients = len(self.time_data)
@@ -177,8 +217,10 @@ class GeneticAlgorithm:
 
         if self.objective=='single':
             selection_function = self.selection
+            callback = self.callback_generation
         elif self.objective=='multiple':
             selection_function = self.selection_multi
+            callback = self.callback_generation_multi
         else:
             raise ValueError("Unknown optimization type: {}".format(self.objective))
 
@@ -192,18 +234,8 @@ class GeneticAlgorithm:
                 results = pool.starmap(self.new_population, args)
                 offspring_population = [child for pair in results for child in pair if np.all(np.bincount(child)[1:] >= min_size)]
 
-            current_best_fitness = min(fitness_scores)
-            if generation == 0:
-                best_fitness = max(fitness_scores)
-            print(current_best_fitness)
-
-            if -np.log10(current_best_fitness) + np.log10(best_fitness) < self.eps:
-                consecutive_generations_without_improvement += 1
-            else:
-                best_fitness = current_best_fitness
-                consecutive_generations_without_improvement = 0
-
-            if consecutive_generations_without_improvement >= self.max_consecutive_generations:
+            callback(fitness_scores,generation)
+            if no_change_count >= self.max_consecutive_generations:
                 break
             if generation == self.num_generations - 1:
                 print("Algorithm did not converge")
@@ -213,8 +245,8 @@ class GeneticAlgorithm:
         end_time = time.time()
         print('Total time taken : ', end_time - start_time, ' seconds')
         if self.res == 'best':
-            best_solution = population[fitness_scores.index(current_best_fitness)]
-            return best_solution, current_best_fitness
+            best_solution = population[fitness_scores.index(max(fitness_scores)]
+            return best_solution, max(fitness_scores)
         elif self.res == 'best_dist':
             population_sel, scores_sel = [population[i] for i in np.argsort(fitness_scores)[:self.nres]], [fitness_scores[i] for i in np.argsort(fitness_scores)[:self.nres]]
             return population_sel, scores_sel
