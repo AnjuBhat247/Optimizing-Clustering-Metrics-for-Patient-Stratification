@@ -3,10 +3,11 @@ import random
 import multiprocessing
 from multiprocessing import Pool
 import time
+from lifelines.statistics import multivariate_logrank_test, pairwise_logrank_test
 from .utils import logrank_fitness, initialize_population
 
 class GeneticAlgorithm:
-    def __init__(self, time_data, status_data,num_clusters=2,res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
+    def __init__(self, time_data, status_data,num_clusters=2,optimize="p_val",objective='single',res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
                  eps=1e-4, max_consecutive_generations=5, selection_percentage=0.25,
                  min_cluster_size=0.1, crossover_type='one-point', mutation_type='flip-bit'):
 
@@ -25,6 +26,9 @@ class GeneticAlgorithm:
         min_cluster_size : minimum cluster size, default 0.1 (10% of number of patients)
         crossover_type : type of crossover, possible values : one-point, two-point, uniform ; default one-point
         mutation_type : type of mutation, possible values : flip-bit, swap ; default flip-bit
+        optimize : optimizes given metric -> if given p_val - algorithm optimizes p_values, if given log_p - algorithm optimizes -log10(p),
+                if given statistic - algorithm optimizes test statistic
+        objective : 'single' objective uses only logrank metrics, 'multiple' objective uses all three metrics
         """
         self.time_data = time_data
         self.status_data = status_data
@@ -40,6 +44,8 @@ class GeneticAlgorithm:
         self.min_cluster_size = min_cluster_size
         self.crossover_type = crossover_type
         self.mutation_type = mutation_type
+        self.objective = objective
+        self.optimize = optimize
 
     def selection(self, population, fitness_scores, num_selected):
         population_sel = [population[i] for i in np.argsort(fitness_scores)[:num_selected]]
@@ -92,6 +98,62 @@ class GeneticAlgorithm:
         child2 = self.mutation(child2)
         return child1, child2
 
+    def fitness_pval(self, solution):
+        fitness1 = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
+        fitness2 = -(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").p_value[0])
+        fitness3 = -(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").p_value[0])
+        if self.objective == 'multiple':
+          return [fitness1,fitness2,fitness3]
+        return fitness1
+
+    def fitness_logp(self, solution):
+        fitness1 = -np.log10(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
+        fitness2 = -np.log10(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").p_value[0])
+        fitness3 = -np.log10(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").p_value[0])
+        if self.objective == 'multiple':
+          return [fitness1,fitness2,fitness3]
+        return fitness1
+
+    def fitness_statistic(self, solution):
+        fitness1 = multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).test_statistic
+        fitness2 = pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").test_statistic[0]
+        fitness3 = pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").test_statistic[0]
+        if self.objective == 'multiple':
+          return [fitness1,fitness2,fitness3]
+        return fitness1
+
+    def pareto_dominates(fitness1, fitness2):
+        """ Returns True if fitness1 Pareto dominates fitness2. """
+        return all(x >= y for x, y in zip(fitness1, fitness2)) and any(x > y for x, y in zip(fitness1, fitness2))
+
+    def get_pareto_front(fitness_scores):
+        """ Returns the Pareto front from the fitness scores. """
+        pareto_front = []
+        for i, fitness1 in enumerate(fitness_scores):
+            if not any(pareto_dominates(fitness2, fitness1) for j, fitness2 in enumerate(fitness_scores) if i != j):
+                pareto_front.append(i)
+        return pareto_front
+
+    def assign_pareto_ranks(fitness_scores):
+        """ Assigns Pareto ranks to the entire fitness scores list. """
+        fitness_scores = fitness_scores.copy()
+        pareto_ranks = {}
+        rank = 1
+        while fitness_scores:
+            pareto_front = get_pareto_front(fitness_scores)
+            for i in pareto_front:
+                pareto_ranks[i] = rank
+            fitness_scores = [fitness_scores[i] for i in range(len(fitness_scores)) if i not in pareto_front]
+            rank += 1
+        return pareto_ranks
+    
+    def selection_multi(population, fitness_scores,num_selected, pareto_ranks):
+        """ Selects the top 25% of the population based on Pareto ranks. """
+        sorted_indices = sorted(pareto_ranks, key=lambda ind: pareto_ranks[ind])
+        selected_indices = sorted_indices[:num_selected]
+        population_sel = [population[i] for i in selected_indices]
+        return population_sel
+
     def run(self):
         start_time = time.time()
         num_patients = len(self.time_data)
@@ -105,8 +167,18 @@ class GeneticAlgorithm:
 
         for generation in range(self.num_generations):
             print(generation)
-            fitness_scores = [logrank_fitness(cluster_indices, self.time_data, self.status_data) for cluster_indices in population]
-            selected_population = self.selection(population, fitness_scores, int(self.population_size * self.selection_percentage))
+            if self.optimize == 'p_val':
+                fitness_scores = [fitness_pval(cluster_indices) for cluster_indices in population]
+            elif self.optimize == 'lop_p':
+                fitness_scores = [fitness_logp(cluster_indices) for cluster_indices in population]
+            elif self.optimize == 'statistic':
+                fitness_scores = [fitness_statistic(cluster_indices) for cluster_indices in population]
+
+            if self.objective=='single':
+                selected_population = self.selection(population, fitness_scores, int(self.population_size * self.selection_percentage))
+            elif self.objective=='multiple':
+                pareto_ranks = assign_pareto_ranks(fitness_scores)
+                selected_population = selection_multi(population, fitness_scores, int(self.population_size * self.selection_percentage), pareto_ranks)
 
             with Pool() as pool:
                 args = [(selected_population,) for _ in range(int(self.population_size // 2))]
