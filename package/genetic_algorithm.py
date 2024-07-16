@@ -48,7 +48,7 @@ class GeneticAlgorithm:
         self.optimize = optimize
 
     def selection(self, population, fitness_scores, num_selected):
-        population_sel = [population[i] for i in np.argsort(fitness_scores)[:num_selected]]
+        population_sel = [population[i] for i in np.argsort(fitness_scores)[-num_selected:][::-1]]
         return population_sel
 
     def crossover(self, parent1, parent2):
@@ -122,33 +122,34 @@ class GeneticAlgorithm:
           return [fitness1,fitness2,fitness3]
         return fitness1
 
-    def pareto_dominates(fitness1, fitness2):
+    def pareto_dominates(self, fitness1, fitness2):
         """ Returns True if fitness1 Pareto dominates fitness2. """
         return all(x >= y for x, y in zip(fitness1, fitness2)) and any(x > y for x, y in zip(fitness1, fitness2))
 
-    def get_pareto_front(fitness_scores):
+    def get_pareto_front(self, fitness_scores):
         """ Returns the Pareto front from the fitness scores. """
         pareto_front = []
         for i, fitness1 in enumerate(fitness_scores):
-            if not any(pareto_dominates(fitness2, fitness1) for j, fitness2 in enumerate(fitness_scores) if i != j):
+            if not any(self.pareto_dominates(fitness2, fitness1) for j, fitness2 in enumerate(fitness_scores) if i != j):
                 pareto_front.append(i)
         return pareto_front
 
-    def assign_pareto_ranks(fitness_scores):
+    def assign_pareto_ranks(self, fitness_scores):
         """ Assigns Pareto ranks to the entire fitness scores list. """
         fitness_scores = fitness_scores.copy()
         pareto_ranks = {}
         rank = 1
         while fitness_scores:
-            pareto_front = get_pareto_front(fitness_scores)
+            pareto_front = self.get_pareto_front(fitness_scores)
             for i in pareto_front:
                 pareto_ranks[i] = rank
             fitness_scores = [fitness_scores[i] for i in range(len(fitness_scores)) if i not in pareto_front]
             rank += 1
         return pareto_ranks
     
-    def selection_multi(population, fitness_scores,num_selected, pareto_ranks):
+    def selection_multi(self, population, fitness_scores,num_selected):
         """ Selects the top 25% of the population based on Pareto ranks. """
+        pareto_ranks = self.assign_pareto_ranks(fitness_scores)
         sorted_indices = sorted(pareto_ranks, key=lambda ind: pareto_ranks[ind])
         selected_indices = sorted_indices[:num_selected]
         population_sel = [population[i] for i in selected_indices]
@@ -165,20 +166,26 @@ class GeneticAlgorithm:
         if self.nres!=None and self.nres >self.population_size :
             raise ValueError("nres should be less than or equal to population_size")
 
+        if self.optimize == 'p_val':
+            fitness_function = self.fitness_pval
+        elif self.optimize == 'lop_p':
+            fitness_function = self.fitness_logp
+        elif self.optimize == 'statistic':
+            fitness_function = self.fitness_statistic
+        else:
+            raise ValueError("Unknown optimization type: {}".format(self.optimize))
+
+        if self.objective=='single':
+            selection_function = self.selection
+        elif self.objective=='multiple':
+            selection_function = self.selection_multi
+        else:
+            raise ValueError("Unknown optimization type: {}".format(self.objective))
+
         for generation in range(self.num_generations):
             print(generation)
-            if self.optimize == 'p_val':
-                fitness_scores = [fitness_pval(cluster_indices) for cluster_indices in population]
-            elif self.optimize == 'lop_p':
-                fitness_scores = [fitness_logp(cluster_indices) for cluster_indices in population]
-            elif self.optimize == 'statistic':
-                fitness_scores = [fitness_statistic(cluster_indices) for cluster_indices in population]
-
-            if self.objective=='single':
-                selected_population = self.selection(population, fitness_scores, int(self.population_size * self.selection_percentage))
-            elif self.objective=='multiple':
-                pareto_ranks = assign_pareto_ranks(fitness_scores)
-                selected_population = selection_multi(population, fitness_scores, int(self.population_size * self.selection_percentage), pareto_ranks)
+            fitness_scores = [fitness_function(cluster_indices) for cluster_indices in population]
+            selected_population = selection_function(population, fitness_scores, int(self.population_size * self.selection_percentage))
 
             with Pool() as pool:
                 args = [(selected_population,) for _ in range(int(self.population_size // 2))]
