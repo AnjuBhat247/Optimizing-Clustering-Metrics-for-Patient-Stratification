@@ -181,7 +181,7 @@ class GeneticAlgorithm:
     def compare_pareto_fronts(self, front1, front2):
         if len(front1) != len(front2):
             return False
-        elif not np.allclose(sol1, sol2):
+        elif not np.allclose(front1, front2):
             return False
         return True
     
