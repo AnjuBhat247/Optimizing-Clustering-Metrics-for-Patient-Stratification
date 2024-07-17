@@ -175,25 +175,36 @@ class GeneticAlgorithm:
             no_change_count = 0
     
         previous_best_fitness = current_best_fitness
-        if self.optimize=='p_val':
-            print(f"Generation: {generation}, Best Fitness: {-current_best_fitness}")
-        else:
-            print(f"Generation: {generation}, Best Fitness: {current_best_fitness}")
+        print(f"Generation: {generation}, Best Fitness: {abs(current_best_fitness)}")
+        
+
+    def compare_pareto_fronts(self, front1, front2):
+        if len(front1) != len(front2):
+            return False
+        elif not np.allclose(sol1, sol2):
+            return False
+        return True
+    
+    def is_pareto_front_stable(self, current_front):
+        if previous_best_fitness is not None:
+            if not self.compare_pareto_fronts(previous_best_fitness, current_front):
+                return False
+            return True
+        return False
 
     def callback_generation_multi(self,fitness_scores,generation):
-        current_best_fitness = max(fitness_scores)
+        pareto_ranks = self.assign_pareto_ranks(fitness_scores)
+        sorted_indices = sorted(pareto_ranks, key=lambda ind: pareto_ranks[ind])
+        current_pareto_front = fitness_scores[sorted_indices[0]]
     
-        if previous_best_fitness is not None:
-          fitness_change = abs(previous_best_fitness - current_best_fitness)
-          if fitness_change < self.eps:
+        if self.is_pareto_front_stable(current_pareto_front):
             no_change_count += 1
-          else:
-            no_change_count = 0
         else:
-          no_change_count = 0
-    
-        previous_best_fitness = current_best_fitness
-        print(f"Generation: {generation}, Best Fitness: {current_best_fitness}")
+            no_change_count = 0
+
+        previous_best_fitness = current_pareto_front
+       
+        print(f"Generation: {generation}, Best Pareto Front: {[abs(x) for x in current_pareto_front]}")
 
     def run(self):
         start_time = time.time()
@@ -244,9 +255,15 @@ class GeneticAlgorithm:
 
         end_time = time.time()
         print('Total time taken : ', end_time - start_time, ' seconds')
-        if self.res == 'best':
+        if self.res == 'best' and self.objective=='single':
             best_solution = population[fitness_scores.index(max(fitness_scores)]
-            return best_solution, max(fitness_scores)
+            best_fitness = max(abs(fitness_scores))
+            return best_solution, best_fitness
+        elif self.res == 'best' and self.objective=='multiple':
+            pareto_ranks = self.assign_pareto_ranks(fitness_scores)
+            sorted_indices = sorted(pareto_ranks, key=lambda ind: pareto_ranks[ind])
+            best_fitness = [abs(x) for x in fitness_scores[sorted_indices[0]]]
+            best_solution = population[sorted_indices[0]]
+            return best_solution, best_fitness
         elif self.res == 'best_dist':
-            population_sel, scores_sel = [population[i] for i in np.argsort(fitness_scores)[:self.nres]], [fitness_scores[i] for i in np.argsort(fitness_scores)[:self.nres]]
-            return population_sel, scores_sel
+            return population, fitness_scores
