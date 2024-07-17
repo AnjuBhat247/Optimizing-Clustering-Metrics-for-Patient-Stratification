@@ -256,7 +256,7 @@ class GeneticAlgorithm:
         end_time = time.time()
         print('Total time taken : ', end_time - start_time, ' seconds')
         if self.res == 'best' and self.objective=='single':
-            best_solution = population[fitness_scores.index(max(fitness_scores)]
+            best_solution = population[fitness_scores.index(max(fitness_scores))]
             best_fitness = max(abs(fitness_scores))
             return best_solution, best_fitness
         elif self.res == 'best' and self.objective=='multiple':
