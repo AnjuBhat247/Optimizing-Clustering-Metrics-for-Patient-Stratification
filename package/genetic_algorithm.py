@@ -47,9 +47,9 @@ class GeneticAlgorithm:
         self.objective = objective
         self.optimize = optimize
 
-        global previous_best_fitness, no_change_count
-        previous_best_fitness = None
-        no_change_count = 0
+        # global previous_best_fitness, no_change_count
+        self.previous_best_fitness = None
+        self.no_change_count = 0
 
     def selection(self, population, fitness_scores, num_selected):
         population_sel = [population[i] for i in np.argsort(fitness_scores)[-num_selected:][::-1]]
@@ -162,19 +162,19 @@ class GeneticAlgorithm:
     def callback_generation(self,fitness_scores,generation):
         current_best_fitness = max(fitness_scores)
     
-        if previous_best_fitness is not None:
+        if self.previous_best_fitness is not None:
             if self.optimize=='p_val':
-                fitness_change = abs(-np.log10(-previous_best_fitness) + np.log10(-current_best_fitness))
+                fitness_change = abs(-np.log10(-self.previous_best_fitness) + np.log10(-current_best_fitness))
             else :
-                fitness_change = abs(previous_best_fitness - current_best_fitness)
+                fitness_change = abs(self.previous_best_fitness - current_best_fitness)
             if fitness_change < self.eps:
-                no_change_count += 1
+                self.no_change_count += 1
             else:
-                no_change_count = 0
+                self.no_change_count = 0
         else:
-            no_change_count = 0
+            self.no_change_count = 0
     
-        previous_best_fitness = current_best_fitness
+        self.previous_best_fitness = current_best_fitness
         print(f"Generation: {generation}, Best Fitness: {abs(current_best_fitness)}")
         
 
@@ -186,8 +186,8 @@ class GeneticAlgorithm:
         return True
     
     def is_pareto_front_stable(self, current_front):
-        if previous_best_fitness is not None:
-            if not self.compare_pareto_fronts(previous_best_fitness, current_front):
+        if self.previous_best_fitness is not None:
+            if not self.compare_pareto_fronts(self.previous_best_fitness, current_front):
                 return False
             return True
         return False
@@ -198,11 +198,11 @@ class GeneticAlgorithm:
         current_pareto_front = fitness_scores[sorted_indices[0]]
     
         if self.is_pareto_front_stable(current_pareto_front):
-            no_change_count += 1
+            self.no_change_count += 1
         else:
-            no_change_count = 0
+            self.no_change_count = 0
 
-        previous_best_fitness = current_pareto_front
+        self.previous_best_fitness = current_pareto_front
        
         print(f"Generation: {generation}, Best Pareto Front: {[abs(x) for x in current_pareto_front]}")
 
@@ -246,7 +246,7 @@ class GeneticAlgorithm:
                 offspring_population = [child for pair in results for child in pair if np.all(np.bincount(child)[1:] >= min_size)]
 
             callback(fitness_scores,generation)
-            if no_change_count >= self.max_consecutive_generations:
+            if self.no_change_count >= self.max_consecutive_generations:
                 break
             if generation == self.num_generations - 1:
                 print("Algorithm did not converge")
