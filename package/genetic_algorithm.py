@@ -236,7 +236,6 @@ class GeneticAlgorithm:
             raise ValueError("Unknown optimization type: {}".format(self.objective))
 
         for generation in range(self.num_generations):
-            print(generation)
             fitness_scores = [fitness_function(cluster_indices) for cluster_indices in population]
             selected_population = selection_function(population, fitness_scores, int(self.population_size * self.selection_percentage))
 
