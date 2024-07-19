@@ -4,10 +4,12 @@ import multiprocessing
 from multiprocessing import Pool
 import time
 from lifelines.statistics import multivariate_logrank_test, pairwise_logrank_test
+from scipy.stats import chi2_contingency
+from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from .utils import logrank_fitness, initialize_population
 
 class GeneticAlgorithm:
-    def __init__(self, time_data, status_data,num_clusters=2,optimize="p_val",objective='single',res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
+    def __init__(self, time_data, status_data,clinical_data=None,omics_data=None,num_clusters=2,optimize="p_val",objective='single',res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
                  eps=1e-4, max_consecutive_generations=5, selection_percentage=0.25,
                  min_cluster_size=0.1, crossover_type='one-point', mutation_type='flip-bit'):
 
@@ -32,6 +34,8 @@ class GeneticAlgorithm:
         """
         self.time_data = time_data
         self.status_data = status_data
+        self.clinical_data = clinical_data
+        self.omics_data = omics_data
         self.num_clusters = num_clusters
         self.res = res
         self.nres = nres
@@ -125,6 +129,23 @@ class GeneticAlgorithm:
         if self.objective == 'multiple':
           return [fitness1,fitness2,fitness3]
         return fitness1
+
+    def fitness_logChi(self,solution):
+        fitness1 = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
+        contingency_table = pd.crosstab(solution, self.clinical_data)
+        chi2, p, _, _ = chi2_contingency(contingency_table)
+        fitness2 = -np.log10(p)
+        return [fitness1,fitness2]
+
+    def fitness_logSil(self,solution):
+        fitness1 = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
+        fitness2 = silhouette_score(self.omics_data, solution)
+        return [fitness1,fitness2]
+
+    def fitness_logCal(self,solution):
+        fitness1 = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
+        fitness2 = calinski_harabasz_score(self.omics_data, solution)
+        return [fitness1,fitness2]
 
     def pareto_dominates(self, fitness1, fitness2):
         """ Returns True if fitness1 Pareto dominates fitness2. """
@@ -223,6 +244,24 @@ class GeneticAlgorithm:
             fitness_function = self.fitness_logp
         elif self.optimize == 'statistic':
             fitness_function = self.fitness_statistic
+        elif self.objective == 'multiple':
+            if self.optimize == 'logCal':
+                if self.omics_data is not None:
+                    fitness_function = self.fitness_logCal
+                else:
+                    raise ValueError("omics_data is required for logCal optimization.")
+            elif self.optimize == 'logChi':
+                if self.clinical_data is not None:
+                    fitness_function = self.fitness_logChi
+                else:
+                    raise ValueError("clinical_data is required for logChi optimization.")
+            elif self.optimize == 'logSil':
+                if self.omics_data is not None:
+                    fitness_function = self.fitness_logSil
+                else:
+                    raise ValueError("omics_data is required for logCal optimization.")
+            else:
+                raise ValueError("Unknown optimization type for multiple objective: {}".format(self.optimize))
         else:
             raise ValueError("Unknown optimization type: {}".format(self.optimize))
 
