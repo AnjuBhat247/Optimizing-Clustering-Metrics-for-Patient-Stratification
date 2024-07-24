@@ -305,4 +305,4 @@ class GeneticAlgorithm:
             best_solution = population[sorted_indices[0]]
             return best_solution, best_fitness
         elif self.res == 'best_dist':
-            return population, fitness_scores
+            return population, np.abs(fitness_scores)
