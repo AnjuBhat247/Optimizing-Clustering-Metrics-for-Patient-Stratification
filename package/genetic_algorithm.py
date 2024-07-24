@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import random
 import multiprocessing
 from multiprocessing import Pool
