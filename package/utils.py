@@ -20,7 +20,7 @@ def transform_omics_data(omics_data):
         scaler = StandardScaler()
         scaled_data = scaler.fit_transform(data)
 
-        pca = PCA()
+        pca = PCA(n_components='mle')
         pca_data = pca.fit_transform(scaled_data)
 
         transformed_omics.append(pca_data)
@@ -29,6 +29,6 @@ def transform_omics_data(omics_data):
     final_scaler = StandardScaler()
     scaled_concatenated_data = final_scaler.fit_transform(concatenated_data)
 
-    final_pca = PCA()
+    final_pca = PCA(n_components='mle')
     final_pca_data = final_pca.fit_transform(scaled_concatenated_data)
     return final_pca_data
