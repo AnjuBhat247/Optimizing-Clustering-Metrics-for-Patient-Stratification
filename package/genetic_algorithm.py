@@ -7,7 +7,7 @@ import time
 from lifelines.statistics import multivariate_logrank_test, pairwise_logrank_test
 from scipy.stats import chi2_contingency
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
-from .utils import logrank_fitness, initialize_population
+from .utils import logrank_fitness, initialize_population, transform_omics_data
 
 class GeneticAlgorithm:
     def __init__(self, time_data, status_data,clinical_data=None,omics_data=None,num_clusters=2,optimize="p_val",objective='single',res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
@@ -248,6 +248,7 @@ class GeneticAlgorithm:
         elif self.objective == 'multiple':
             if self.optimize == 'logCal':
                 if self.omics_data is not None:
+                    self.omics_data = transform_omics_data(self.omics_data)
                     fitness_function = self.fitness_logCal
                 else:
                     raise ValueError("omics_data is required for logCal optimization.")
@@ -258,6 +259,7 @@ class GeneticAlgorithm:
                     raise ValueError("clinical_data is required for logChi optimization.")
             elif self.optimize == 'logSil':
                 if self.omics_data is not None:
+                    self.omics_data = transform_omics_data(self.omics_data)
                     fitness_function = self.fitness_logSil
                 else:
                     raise ValueError("omics_data is required for logCal optimization.")
