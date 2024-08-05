@@ -16,7 +16,7 @@ def initialize_population(population_size, num_patients,num_clusters):
 def transform_omics_data(omics_data):
     transformed_omics = []
 
-    for omics_type, data in omics_data.items():
+    for data in omics_data:
         scaler = StandardScaler()
         scaled_data = scaler.fit_transform(data)
 
