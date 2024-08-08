@@ -12,7 +12,7 @@ from .utils import logrank_fitness, initialize_population, transform_omics_data
 class GeneticAlgorithm:
     def __init__(self, time_data, status_data,clinical_data=None,omics_data=None,num_clusters=2,optimize="p_val",objective='single',res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
                  eps=1e-4, max_consecutive_generations=5, selection_percentage=0.25,
-                 min_cluster_size=0.1, crossover_type='one-point', mutation_type='flip-bit'):
+                 min_cluster_size=0.1, crossover_type='one-point', mutation_type='flip-bit',n_comp=None):
 
         """
         time_data : number of days/months until the specified event i.e., death
@@ -32,6 +32,8 @@ class GeneticAlgorithm:
         optimize : optimizes given metric -> if given p_val - algorithm optimizes p_values, if given log_p - algorithm optimizes -log10(p),
                 if given statistic - algorithm optimizes test statistic
         objective : 'single' objective uses only logrank metrics, 'multiple' objective uses all three metrics
+        n_comp : if omics data is provided, and in PCA n_components='mle' doesn't support while performing preprocessing, this value is considered. If not specified,
+                it will consider all the features.
         """
         self.time_data = time_data
         self.status_data = status_data
@@ -248,7 +250,7 @@ class GeneticAlgorithm:
         elif self.objective == 'multiple':
             if self.optimize == 'logCal':
                 if self.omics_data is not None:
-                    self.omics_data = transform_omics_data(self.omics_data)
+                    self.omics_data = transform_omics_data(self.omics_data,n_comp)
                     fitness_function = self.fitness_logCal
                 else:
                     raise ValueError("omics_data is required for logCal optimization.")
@@ -259,7 +261,7 @@ class GeneticAlgorithm:
                     raise ValueError("clinical_data is required for logChi optimization.")
             elif self.optimize == 'logSil':
                 if self.omics_data is not None:
-                    self.omics_data = transform_omics_data(self.omics_data)
+                    self.omics_data = transform_omics_data(self.omics_data,n_comp)
                     fitness_function = self.fitness_logSil
                 else:
                     raise ValueError("omics_data is required for logCal optimization.")
