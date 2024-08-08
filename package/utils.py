@@ -13,7 +13,7 @@ def initialize_population(population_size, num_patients,num_clusters):
     population = [np.random.randint(1, num_clusters+1, num_patients) for _ in range(population_size)]  
     return population
 
-def transform_omics_data(omics_data,n_comp=None):
+def transform_omics_data(omics_data,n_comp):
     transformed_omics = []
 
     for data in omics_data:
