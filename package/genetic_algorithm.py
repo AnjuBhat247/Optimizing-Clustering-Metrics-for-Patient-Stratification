@@ -53,6 +53,7 @@ class GeneticAlgorithm:
         self.mutation_type = mutation_type
         self.objective = objective
         self.optimize = optimize
+        self.n_comp = n_comp
 
         # global previous_best_fitness, no_change_count
         self.previous_best_fitness = None
@@ -250,7 +251,7 @@ class GeneticAlgorithm:
         elif self.objective == 'multiple':
             if self.optimize == 'logCal':
                 if self.omics_data is not None:
-                    self.omics_data = transform_omics_data(self.omics_data,n_comp)
+                    self.omics_data = transform_omics_data(self.omics_data,self.n_comp)
                     fitness_function = self.fitness_logCal
                 else:
                     raise ValueError("omics_data is required for logCal optimization.")
@@ -261,7 +262,7 @@ class GeneticAlgorithm:
                     raise ValueError("clinical_data is required for logChi optimization.")
             elif self.optimize == 'logSil':
                 if self.omics_data is not None:
-                    self.omics_data = transform_omics_data(self.omics_data,n_comp)
+                    self.omics_data = transform_omics_data(self.omics_data,self.n_comp)
                     fitness_function = self.fitness_logSil
                 else:
                     raise ValueError("omics_data is required for logCal optimization.")
