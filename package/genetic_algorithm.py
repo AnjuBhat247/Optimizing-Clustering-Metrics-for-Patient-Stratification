@@ -10,7 +10,7 @@ from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from .utils import logrank_fitness, initialize_population, transform_omics_data
 
 class GeneticAlgorithm:
-    def __init__(self, time_data, status_data,clinical_data=None,omics_data=None,num_clusters=2,optimize="p_val",objective='single',res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
+    def __init__(self, time_data, status_data,clinical_data=None,omics_data=None,num_clusters=2,metrics="multivariate_pval",res='best',nres=None, population_size=100, num_generations=500, mutation_rate=0.01,
                  eps=1e-4, max_consecutive_generations=5, selection_percentage=0.25,
                  min_cluster_size=0.1, crossover_type='one-point', mutation_type='flip-bit',n_comp=None):
 
@@ -18,6 +18,8 @@ class GeneticAlgorithm:
         time_data : number of days/months until the specified event i.e., death
         status_data : Binary Censoring status
         num_clusters : number of clusters
+        metrics : a metric or list of metrics to optimize
+        # optimize : to optimize which factor in a metric. Used only for multivariate log-rank, taron-ware and wilcoxon
         res = required result ; 'best' returns only single best solution, 'best_dist' returns number of best solutions mentioned in nres
         nres = number of best scores needed if res = 'best_distr'
         population_size : number of candidate solutions to be generated, default 100
@@ -40,6 +42,7 @@ class GeneticAlgorithm:
         self.clinical_data = clinical_data
         self.omics_data = omics_data
         self.num_clusters = num_clusters
+        # self.optimize = optimize
         self.res = res
         self.nres = nres
         self.population_size = population_size
@@ -51,8 +54,8 @@ class GeneticAlgorithm:
         self.min_cluster_size = min_cluster_size
         self.crossover_type = crossover_type
         self.mutation_type = mutation_type
-        self.objective = objective
-        self.optimize = optimize
+        # self.objective = objective
+        self.metrics = metrics
         self.n_comp = n_comp
 
         # global previous_best_fitness, no_change_count
@@ -110,46 +113,55 @@ class GeneticAlgorithm:
         child2 = self.mutation(child2)
         return child1, child2
 
-    def fitness_pval(self, solution):
-        fitness1 = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
-        fitness2 = -(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").p_value[0])
-        fitness3 = -(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").p_value[0])
-        if self.objective == 'multiple':
-          return [fitness1,fitness2,fitness3]
-        return fitness1
+    def multivariate_pval(self, solution):
+        fitness = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)    
+        return fitness
 
-    def fitness_logp(self, solution):
-        fitness1 = -np.log10(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
-        fitness2 = -np.log10(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").p_value[0])
-        fitness3 = -np.log10(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").p_value[0])
-        if self.objective == 'multiple':
-          return [fitness1,fitness2,fitness3]
-        return fitness1
+    def multivariate_logp(self, solution):
+        fitness = -np.log10(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)    
+        return fitness
 
-    def fitness_statistic(self, solution):
-        fitness1 = multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).test_statistic
-        fitness2 = pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").test_statistic[0]
-        fitness3 = pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").test_statistic[0]
-        if self.objective == 'multiple':
-          return [fitness1,fitness2,fitness3]
-        return fitness1
+    def multivariate_statistic(self, solution):
+        fitness = multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).test_statistic   
+        return fitness
 
-    def fitness_logChi(self,solution):
-        fitness1 = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
+    def wilcoxon_pval(self, solution):
+        fitness = -(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").p_value[0])    
+        return fitness
+
+    def wilcoxon_logp(self, solution):
+        fitness = -np.log10(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,,weightings="wilcoxon").p_value[0])    
+        return fitness
+
+    def wilcoxon_statistic(self, solution):
+        fitness = pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").test_statistic[0]    
+        return fitness
+
+    def taroneware_pval(self, solution):
+        fitness = -(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").p_value[0])    
+        return fitness
+
+    def taroneware_logp(self, solution):
+        fitness = -np.log10(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").p_value[0])    
+        return fitness
+
+    def taroneware_statistic(self, solution):
+        fitness = pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="tarone-ware").test_statistic[0]   
+        return fitness
+
+    def chisquare(self,solution):
         contingency_table = pd.crosstab(solution, self.clinical_data)
         chi2, p, _, _ = chi2_contingency(contingency_table)
-        fitness2 = -np.log10(p)
-        return [fitness1,fitness2]
+        fitness = -np.log10(p)
+        return fitness
 
-    def fitness_logSil(self,solution):
-        fitness1 = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
-        fitness2 = silhouette_score(self.omics_data, solution)
-        return [fitness1,fitness2]
+    def silhouette(self,solution):
+        fitness = silhouette_score(self.omics_data, solution)
+        return fitness
 
-    def fitness_logCal(self,solution):
-        fitness1 = -(multivariate_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data).p_value)
-        fitness2 = calinski_harabasz_score(self.omics_data, solution)
-        return [fitness1,fitness2]
+    def calinski(self,solution):
+        fitness = calinski_harabasz_score(self.omics_data, solution)
+        return fitness
 
     def pareto_dominates(self, fitness1, fitness2):
         """ Returns True if fitness1 Pareto dominates fitness2. """
@@ -188,7 +200,7 @@ class GeneticAlgorithm:
         current_best_fitness = max(fitness_scores)
     
         if self.previous_best_fitness is not None:
-            if self.optimize=='p_val':
+            if 'pval' in self.metrics:
                 fitness_change = abs(-np.log10(-self.previous_best_fitness) + np.log10(-current_best_fitness))
             else :
                 fitness_change = abs(self.previous_best_fitness - current_best_fitness)
@@ -242,34 +254,31 @@ class GeneticAlgorithm:
         if self.nres!=None and self.nres >self.population_size :
             raise ValueError("nres should be less than or equal to population_size")
 
-        if self.optimize == 'p_val':
-            fitness_function = self.fitness_pval
-        elif self.optimize == 'lop_p':
-            fitness_function = self.fitness_logp
-        elif self.optimize == 'statistic':
-            fitness_function = self.fitness_statistic
-        elif self.objective == 'multiple':
-            if self.optimize == 'logCal':
+        if isinstance(self.metrics, str):
+            try:
+                fitness_function = getattr(self, self.metrics)
+            except AttributeError:
+                raise ValueError(f"Unknown fitness function: '{self.metrics}'. "
+                             "Available fitness functions: multivariate_pval, multivariate_logp, multivariate_statistic, wilcoxon_pval, wilcoxon_logp, wilcoxon_statistic, taronware_pval, taronware_logp, taronware_statistic, calinski, silhouette, chisquare")
+            if self.metrics in ['silhouette', 'calinski']:
                 if self.omics_data is not None:
-                    self.omics_data = transform_omics_data(self.omics_data,self.n_comp)
-                    fitness_function = self.fitness_logCal
-                else:
+                    self.omics_data = self.transform_omics_data(self.omics_data, self.n_comp)
+                else : 
                     raise ValueError("omics_data is required for logCal optimization.")
-            elif self.optimize == 'logChi':
-                if self.clinical_data is not None:
-                    fitness_function = self.fitness_logChi
-                else:
+            if self.metrics == 'chisquare':
+                if self.clinical_data is None:
                     raise ValueError("clinical_data is required for logChi optimization.")
-            elif self.optimize == 'logSil':
+        elif isinstance(self.metrics, list):
+            if any(metric in ['silhouette', 'calinski'] for metric in self.metrics):
                 if self.omics_data is not None:
-                    self.omics_data = transform_omics_data(self.omics_data,self.n_comp)
-                    fitness_function = self.fitness_logSil
-                else:
+                    self.omics_data = self.transform_omics_data(self.omics_data, self.n_comp)
+                else : 
                     raise ValueError("omics_data is required for logCal optimization.")
-            else:
-                raise ValueError("Unknown optimization type for multiple objective: {}".format(self.optimize))
-        else:
-            raise ValueError("Unknown optimization type: {}".format(self.optimize))
+            if any(metric in ['chisquare'] for metric in self.metrics):
+                if self.clinical_data is None:
+                    raise ValueError("clinical_data is required for logChi optimization.")
+       
+           
 
         if self.objective=='single':
             selection_function = self.selection
