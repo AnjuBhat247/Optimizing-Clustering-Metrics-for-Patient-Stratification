@@ -63,6 +63,7 @@ class GeneticAlgorithm:
         self.no_change_count = 0
 
     def selection(self, population, fitness_scores, num_selected):
+        fitness_scores = [score[0] for score in fitness_scores]
         population_sel = [population[i] for i in np.argsort(fitness_scores)[-num_selected:][::-1]]
         return population_sel
 
@@ -197,6 +198,7 @@ class GeneticAlgorithm:
         return population_sel
 
     def callback_generation(self,fitness_scores,generation):
+        fitness_scores = [score[0] for score in fitness_scores]
         current_best_fitness = max(fitness_scores)
     
         if self.previous_best_fitness is not None:
@@ -256,7 +258,10 @@ class GeneticAlgorithm:
 
         if isinstance(self.metrics, str):
             try:
-                fitness_function = getattr(self, self.metrics)
+                fitness_functions = [getattr(self, self.metrics)]
+                selection_function = self.selection
+                callback = self.callback_generation
+                objective = 'single'
             except AttributeError:
                 raise ValueError(f"Unknown fitness function: '{self.metrics}'. "
                              "Available fitness functions: multivariate_pval, multivariate_logp, multivariate_statistic, wilcoxon_pval, wilcoxon_logp, wilcoxon_statistic, taronware_pval, taronware_logp, taronware_statistic, calinski, silhouette, chisquare")
@@ -269,6 +274,14 @@ class GeneticAlgorithm:
                 if self.clinical_data is None:
                     raise ValueError("clinical_data is required for logChi optimization.")
         elif isinstance(self.metrics, list):
+            try:
+                fitness_functions = [getattr(self, metric) for metric in self.metrics]
+                selection_function = self.selection_multi
+                callback = self.callback_generation_multi
+                objective = 'multiple'
+            except AttributeError:
+                raise ValueError(f"Unknown fitness function: '{self.metrics}'. "
+                             "Available fitness functions: multivariate_pval, multivariate_logp, multivariate_statistic, wilcoxon_pval, wilcoxon_logp, wilcoxon_statistic, taronware_pval, taronware_logp, taronware_statistic, calinski, silhouette, chisquare")
             if any(metric in ['silhouette', 'calinski'] for metric in self.metrics):
                 if self.omics_data is not None:
                     self.omics_data = self.transform_omics_data(self.omics_data, self.n_comp)
@@ -277,20 +290,9 @@ class GeneticAlgorithm:
             if any(metric in ['chisquare'] for metric in self.metrics):
                 if self.clinical_data is None:
                     raise ValueError("clinical_data is required for logChi optimization.")
-       
-           
-
-        if self.objective=='single':
-            selection_function = self.selection
-            callback = self.callback_generation
-        elif self.objective=='multiple':
-            selection_function = self.selection_multi
-            callback = self.callback_generation_multi
-        else:
-            raise ValueError("Unknown optimization type: {}".format(self.objective))
 
         for generation in range(self.num_generations):
-            fitness_scores = [fitness_function(cluster_indices) for cluster_indices in population]
+            fitness_scores = [[fitness_function(cluster_indices) for fitness_function in fitness_functions] for cluster_indices in population]
             selected_population = selection_function(population, fitness_scores, int(self.population_size * self.selection_percentage))
 
             with Pool() as pool:
@@ -308,15 +310,17 @@ class GeneticAlgorithm:
 
         end_time = time.time()
         print('Total time taken : ', end_time - start_time, ' seconds')
-        if self.res == 'best' and self.objective=='single':
+        if self.res == 'best' and objective=='single':
+            fitness_scores = [score[0] for score in fitness_scores]
             best_solution = population[fitness_scores.index(max(fitness_scores))]
             best_fitness = max(abs(fitness_scores))
             return best_solution, best_fitness
-        elif self.res == 'best' and self.objective=='multiple':
+        elif self.res == 'best' and objective=='multiple':
             pareto_ranks = self.assign_pareto_ranks(fitness_scores)
             sorted_indices = sorted(pareto_ranks, key=lambda ind: pareto_ranks[ind])
             best_fitness = [abs(x) for x in fitness_scores[sorted_indices[0]]]
             best_solution = population[sorted_indices[0]]
             return best_solution, best_fitness
         elif self.res == 'best_dist':
-            return population, np.abs(fitness_scores)
+            fitness_scores = np.abs([score[0] for score in fitness_scores] if isinstance(self.metrics, str) else fitness_scores)
+            return population, fitness_scores
