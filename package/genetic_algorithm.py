@@ -131,7 +131,7 @@ class GeneticAlgorithm:
         return fitness
 
     def wilcoxon_logp(self, solution):
-        fitness = -np.log10(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,,weightings="wilcoxon").p_value[0])    
+        fitness = -np.log10(pairwise_logrank_test(event_durations=self.time_data, groups=solution, event_observed=self.status_data,weightings="wilcoxon").p_value[0])    
         return fitness
 
     def wilcoxon_statistic(self, solution):
