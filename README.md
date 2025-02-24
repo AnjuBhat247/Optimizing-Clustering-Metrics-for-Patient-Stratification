@@ -18,6 +18,6 @@ _This project was part of my MSc2 internship, which lasted 5.5 months at the Ins
 <b>Note:</b>
   Complete documentation is provided in the <i>BHAT_ANJANA_Internship_M2.pdf file</i>.
 </p>
+
   ![image](https://github.com/user-attachments/assets/4b22cebb-daa7-4866-9cb5-8021e1dfdac9)
-  ![Candidate_Gene_network_Autism](https://github.com/AnjuBhat247/Multi-omics-Integration/assets/139755515/6acd8977-5744-4778-ba58-f07cc06e78d5)
 
