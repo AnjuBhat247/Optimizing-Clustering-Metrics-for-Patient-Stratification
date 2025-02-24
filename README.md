@@ -18,3 +18,4 @@ _This project was part of my MSc2 internship, which lasted 5.5 months at the Ins
 <b>Note:</b>
   Complete documentation is provided in the <i>BHAT_ANJANA_Internship_M2.pdf file</i>.
 </p>
+![image](https://github.com/user-attachments/assets/4b22cebb-daa7-4866-9cb5-8021e1dfdac9)
